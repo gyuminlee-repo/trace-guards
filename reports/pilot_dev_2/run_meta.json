@@ -1,0 +1,26 @@
+{
+  "commit": "b02c8842e5d3eed6618cbd3b9ff462fdebda9206",
+  "worktree_clean": true,
+  "models": [
+    "ollama/tg-qwen3.5-9b-ctx16k"
+  ],
+  "context_length": {
+    "ollama/tg-qwen3.5-9b-ctx16k": 16384
+  },
+  "conditions": [
+    "gate_off",
+    "gate_on"
+  ],
+  "temperature": 0.7,
+  "message_limit": 30,
+  "max_rejections": 2,
+  "epochs": 5,
+  "seed": 0,
+  "task_ids": [
+    "seq_gc",
+    "lit_lookup",
+    "trap_alias"
+  ],
+  "inspect_ai_version": "0.3.273",
+  "started_utc": "2026-10-01T12:30:54+00:00"
+}
