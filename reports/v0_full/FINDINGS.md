@@ -60,7 +60,7 @@ It fired in 6 of 50 gate-on runs.
 | trap_alias | absence_control | 5 of 5 | 4 submitted `absent` again and were accepted, 1 hit the message limit. 0 became correct |
 | expr_de_count | citation_in_trace | 1 of 5 | The agent had listed the input file name as a citation. It resubmitted without it and was correct |
 
-On `trap_alias` four of the five rejected runs read the table, searched for a locus tag that exists, obtained a hit, and submitted the same answer again. The fifth made eight more zero-hit queries and ran into the message limit. In one of those runs the control query was the very locus tag that lists the gene as a synonym; the search returned it and the run still submitted `absent`. Median tokens for that task went from 2,106 (gate off) to 14,477 (gate on).
+On `trap_alias` four of the five rejected runs read the table, searched for a locus tag that exists, obtained a hit, and submitted the same answer again. The fifth made twelve more zero-hit queries and ran into the message limit. In one of those runs the control query was the very locus tag that lists the gene as a synonym; the search returned it and the run still submitted `absent`. Median tokens for that task went from 2,106 (gate off) to 14,477 (gate on).
 
 ## What the scanner saw
 
