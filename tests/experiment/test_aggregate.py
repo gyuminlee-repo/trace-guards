@@ -129,6 +129,20 @@ SCENARIOS = {
 }  # fmt: skip
 
 
+CONTEXT = 1000
+# Largest prompt per scenario; the risk line is 900 of 1000. None: no model call reported usage.
+PROMPT_SIZES = {
+    "accepted_correct": 100, "confident_wrong": 899, "confident_wrong_absent": 900,
+    "honest_abstention": 1500, "wrong_abstention": 0, "no_submission": None,
+    "rejected_then_correct": 901, "gate_exhausted": 450, "rejected_until_limit": 899,
+}  # fmt: skip
+EXPECTED_RISK = {
+    "accepted_correct": 0, "confident_wrong": 0, "confident_wrong_absent": 1,
+    "honest_abstention": 1, "wrong_abstention": 0, "no_submission": "",
+    "rejected_then_correct": 1, "gate_exhausted": 0, "rejected_until_limit": 0,
+}  # fmt: skip
+
+
 def scenario_rows() -> list[dict]:
     rows = []
     for epoch, (name, (condition, task, data, _)) in enumerate(SCENARIOS.items(), start=1):
@@ -139,6 +153,7 @@ def scenario_rows() -> list[dict]:
                 condition=condition, expected_status=task.expected_status, store=data,
                 correct=correct, input_tokens=10 * epoch, output_tokens=epoch,
                 total_tokens=11 * epoch, wall_seconds=float(epoch),
+                max_prompt_tokens=PROMPT_SIZES[name], context_length=CONTEXT,
             )  # fmt: skip
         )
     return rows
@@ -150,6 +165,9 @@ def test_run_row_measures(name: str) -> None:
     row = dict(zip(SCENARIOS, scenario_rows()))[name]
     assert set(row) == set(aggregate.RUN_COLUMNS)
     assert {k: row[k] for k in expected} == expected
+    assert row["context_risk"] == EXPECTED_RISK[name]
+    size = PROMPT_SIZES[name]
+    assert row["max_prompt_tokens"] == ("" if size is None else size)
 
 
 def test_grading_a_correct_run_without_accepted_submission_is_an_error() -> None:
@@ -157,7 +175,7 @@ def test_grading_a_correct_run_without_accepted_submission_is_an_error() -> None
     with pytest.raises(ValueError):
         aggregate.run_row(
             model="m", task_id=task.id, kind=task.kind, trap=None, epoch=1, condition="gate_off",
-            expected_status="answered", store=data, correct=True,
+            expected_status="answered", store=data, correct=True, context_length=CONTEXT,
         )  # fmt: skip
 
 
@@ -216,6 +234,17 @@ def test_condition_summary_counts_and_denominators() -> None:
     assert got["gate_on", "n_rejections"]["mean"] == pytest.approx(4 / 3)
     assert got["gate_on", "n_rejections"]["median"] == 1
     assert got["gate_on", "wall_seconds"]["denominator"] == 3
+    # Context risk, counted from EXPECTED_RISK: the run without usage leaves the denominator.
+    for condition in ("gate_off", "gate_on"):
+        risks = [EXPECTED_RISK[n] for n, (c, *_) in SCENARIOS.items() if c == condition]
+        known = [r for r in risks if r != ""]
+        line = got[condition, "context_risk"]
+        assert (line["count"], line["denominator"]) == (sum(known), len(known))
+    assert (got["gate_off", "context_risk"]["count"], got["gate_off", "context_risk"]["denominator"]) == (2, 5)
+    assert (got["gate_on", "context_risk"]["count"], got["gate_on", "context_risk"]["denominator"]) == (1, 3)
+    assert got["gate_off", "max_prompt_tokens"]["max"] == 1500
+    assert got["gate_off", "max_prompt_tokens"]["denominator"] == 5
+    assert got["gate_on", "max_prompt_tokens"]["max"] == 901
 
 
 # Wilson 95% intervals for n = 10 as printed in standard tables (z = 1.96).
@@ -309,7 +338,8 @@ def test_per_task_table_counts() -> None:
 
 
 META = {
-    "commit": "0" * 40, "worktree_clean": True, "models": ["m"], "conditions": ["gate_off", "gate_on"],
+    "commit": "0" * 40, "worktree_clean": True, "models": ["m"], "context_length": {"m": CONTEXT},
+    "conditions": ["gate_off", "gate_on"],
     "temperature": 0.7, "message_limit": 30, "max_rejections": 2, "epochs": 9, "seed": 0,
     "task_ids": ["t_num", "t_unknown"], "inspect_ai_version": "x",
     "started_utc": "2026-01-01T00:00:00+00:00",
@@ -324,6 +354,9 @@ def test_summary_markdown_names_denominators_and_avoids_banned_text() -> None:
     assert "0" * 40 in text and "t_num, t_unknown" in text
     assert "| confident_wrong | 2 / 6 |" in text
     assert "| confident_wrong | 1 / 3 |" in text
+    assert "| context_risk | 2 / 5 |" in text
+    assert "| max_prompt_tokens | 5 | 899.0000 | 679.8000 | 1500 |" in text
+    assert "context length (tokens): m 1000" in text
     assert "| abstained_where_expected | 0 / 0 | n/a | n/a |" in text
     assert "No pair has both conditions." in text
     assert chr(0x2014) not in text
@@ -338,3 +371,21 @@ def test_empty_folder_and_folder_without_logs_fail(tmp_path, capsys) -> None:
     assert aggregate.main([str(tmp_path)]) == 1
     assert "nothing written" in capsys.readouterr().err
     assert sorted(p.name for p in tmp_path.iterdir()) == [run.LOG_DIR, run.META_FILE]
+
+
+def test_max_prompt_tokens_reads_the_largest_model_call() -> None:
+    from types import SimpleNamespace as NS
+
+    def model_event(uncached, cached):
+        usage = NS(input_tokens=uncached, input_tokens_cache_read=cached)
+        return NS(event="model", output=NS(usage=usage))
+
+    events = [
+        model_event(700, None),
+        NS(event="tool"),
+        model_event(40, 900),  # 940: most of the prompt came from the cache
+        model_event(800, 0),
+        NS(event="model", output=NS(usage=None)),
+    ]
+    assert aggregate.max_prompt_tokens(NS(events=events)) == 940
+    assert aggregate.max_prompt_tokens(NS(events=[NS(event="tool")])) is None

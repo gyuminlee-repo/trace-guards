@@ -113,6 +113,7 @@ def test_scorer_and_aggregate_on_scripted_runs(scripted_model, tmp_path) -> None
 
     meta = {
         "commit": "0" * 40, "worktree_clean": True, "models": ["mockllm/model"],
+        "context_length": {"mockllm/model": 100},
         "conditions": list(build.CONDITIONS), "temperature": build.TEMPERATURE,
         "message_limit": build.MESSAGE_LIMIT, "max_rejections": build.MAX_REJECTIONS,
         "epochs": 1, "seed": 0, "task_ids": [spec.id], "inspect_ai_version": "x",
@@ -134,6 +135,14 @@ def test_scorer_and_aggregate_on_scripted_runs(scripted_model, tmp_path) -> None
     # Three scripted model calls of 3 + 2 tokens each in the gated run, one in the other.
     assert (on["input_tokens"], on["output_tokens"], on["total_tokens"]) == ("9", "6", "15")
     assert off["total_tokens"] == "5"
+    # Every scripted call reports a prompt of 3 tokens; 3 is below 90 of 100.
+    assert (on["max_prompt_tokens"], on["context_risk"]) == ("3", "0")
+
+    # Without a context length for the model the aggregation refuses.
+    for broken in ({}, {"context_length": {}}, {"context_length": {"mockllm/model": None}}):
+        stripped = {k: v for k, v in meta.items() if k != "context_length"} | broken
+        (tmp_path / run.META_FILE).write_text(json.dumps(stripped), encoding="utf-8")
+        assert aggregate.main([str(tmp_path)]) == 1
     text = (tmp_path / "summary.md").read_text(encoding="utf-8")
     assert "preliminary" in text.splitlines()[0]
     assert aggregate.TOO_FEW_TASKS in text
@@ -156,8 +165,63 @@ def test_scorer_marks_a_run_without_accepted_submission_incorrect(scripted_model
     assert score.value == "I"
     assert score.metadata == {"accepted_submission_present": False}
     assert "no accepted submission" in score.explanation
-    (row,) = aggregate.rows_from_log(log)
+    (row,) = aggregate.rows_from_log(log, context_length=100)
     assert row["accepted_submission_present"] == 0
     assert (row["correct"], row["confident_wrong"], row["abstained"]) == (0, 0, 0)
     assert row["error"] == "limit:message"
     assert row["n_rejections"] == row["n_submit_calls"] >= 1
+
+
+def test_context_length_lookup_and_url(monkeypatch) -> None:
+    def server(ps_models, parameters):
+        def fetch(path, body=None):
+            if path == "/api/ps":
+                return {"models": ps_models}
+            assert (path, body) == ("/api/show", {"model": "tg-x"})
+            return {"parameters": parameters}
+
+        return fetch
+
+    loaded = [{"name": "tg-x:latest", "context_length": 16384}, {"name": "other", "context_length": 4096}]
+    # A loaded model reports the value in use, whatever its parameters say.
+    assert run.context_length("ollama/tg-x", server(loaded, "num_ctx 8192")) == 16384
+    # Not loaded: the num_ctx parameter. "num_ctx_extra" and "top_k" are not it.
+    text = "top_k                64\nnum_ctx_extra 1\nnum_ctx              16384\ntemperature 1"
+    assert run.context_length("ollama/tg-x", server(loaded[1:], text)) == 16384
+    # Not loaded and no num_ctx: the server default applies and is not known.
+    assert run.context_length("ollama/tg-x", server([], "top_k 64")) is None
+    assert run.context_length("ollama/tg-x", server([], None)) is None
+    # Not an Ollama model: no lookup at all.
+    assert run.context_length("mockllm/model", lambda *a: pytest.fail("no call expected")) is None
+
+    def down(path, body=None):
+        raise OSError("connection refused")
+
+    assert run.context_length("ollama/tg-x", down) is None
+
+    monkeypatch.delenv(run.OLLAMA_URL_VARIABLE, raising=False)
+    assert run.ollama_url() == "http://127.0.0.1:11434"
+    monkeypatch.setenv(run.OLLAMA_URL_VARIABLE, "http://example.test:1234/v1/")
+    assert run.ollama_url() == "http://example.test:1234"
+
+
+def test_run_refuses_an_unknown_context_length(monkeypatch, tmp_path, capsys) -> None:
+    monkeypatch.setattr(run, "git_state", lambda: ("0" * 40, True))
+    monkeypatch.setattr(run, "context_length", lambda model: None)
+    monkeypatch.setattr(run, "eval", lambda *a, **k: pytest.fail("eval must not start"))
+    out = tmp_path / "out"
+    code = run.main(["--tasks", "seq_gc", "--epochs", "1", "--models", "ollama/x", "--out", str(out)])
+    assert code == 2
+    assert "context length unknown" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_run_writes_context_length_into_the_metadata(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(run, "git_state", lambda: ("0" * 40, True))
+    monkeypatch.setattr(run, "context_length", lambda model: 16384)
+    monkeypatch.setattr(run, "eval", lambda *a, **k: [])
+    out = tmp_path / "out"
+    assert run.main(["--tasks", "seq_gc", "--epochs", "1", "--models", "ollama/x", "--out", str(out)]) == 0
+    meta = json.loads((out / run.META_FILE).read_text(encoding="utf-8"))
+    assert meta["context_length"] == {"ollama/x": 16384}
+    assert meta["task_ids"] == ["seq_gc"]

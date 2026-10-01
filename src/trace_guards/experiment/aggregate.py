@@ -29,14 +29,19 @@ RUN_COLUMNS = (
     "expected_status", "correct", "confident_wrong", "abstained", "wrong_abstention",
     "n_submit_calls", "n_rejections", "gate_exhausted", "first_findings",
     "final_findings", "first_unsupported", "n_tool_events", "input_tokens",
-    "output_tokens", "total_tokens", "wall_seconds", "accepted_submission_present",
-    "error",
+    "output_tokens", "total_tokens", "max_prompt_tokens", "context_risk", "wall_seconds",
+    "accepted_submission_present", "error",
 )  # fmt: skip
 SUMMARY_COLUMNS = (
     "model", "condition", "metric", "count", "denominator", "rate",
-    "ci_low", "ci_high", "median", "mean", "note",
+    "ci_low", "ci_high", "median", "mean", "max", "note",
 )  # fmt: skip
-COST_FIELDS = ("n_rejections", "input_tokens", "output_tokens", "total_tokens", "wall_seconds")
+COST_FIELDS = (
+    "n_rejections", "input_tokens", "output_tokens", "total_tokens",
+    "max_prompt_tokens", "wall_seconds",
+)  # fmt: skip
+# A run is at risk when its largest prompt reaches this share of the context length.
+CONTEXT_RISK_NUMERATOR, CONTEXT_RISK_DENOMINATOR = 9, 10
 PAIRED_CONDITION = "gate_on_minus_gate_off"
 PAIRED_METRIC = "confident_wrong_paired_difference"
 MIN_TASKS_FOR_INTERVAL = 5
@@ -81,6 +86,8 @@ def run_row(
     input_tokens: int = 0,
     output_tokens: int = 0,
     total_tokens: int = 0,
+    max_prompt_tokens: int | None = None,
+    context_length: int,
     wall_seconds: float = 0.0,
     error: str = "",
 ) -> dict[str, Any]:
@@ -117,13 +124,31 @@ def run_row(
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "total_tokens": total_tokens,
+        # Blank when no model call of the run reported usage.
+        "max_prompt_tokens": "" if max_prompt_tokens is None else max_prompt_tokens,
+        "context_risk": ""
+        if max_prompt_tokens is None
+        else int(
+            max_prompt_tokens * CONTEXT_RISK_DENOMINATOR
+            >= context_length * CONTEXT_RISK_NUMERATOR
+        ),
         "wall_seconds": round(wall_seconds, 3),
         "accepted_submission_present": int(final is not None),
         "error": error,
     }
 
 
-def rows_from_log(log: EvalLog) -> list[dict[str, Any]]:
+def max_prompt_tokens(sample: Any) -> int | None:
+    """Largest prompt of any model call: input tokens plus tokens read from the cache."""
+    sizes = [
+        event.output.usage.input_tokens + (event.output.usage.input_tokens_cache_read or 0)
+        for event in sample.events
+        if event.event == "model" and event.output.usage is not None
+    ]
+    return max(sizes) if sizes else None
+
+
+def rows_from_log(log: EvalLog, context_length: int) -> list[dict[str, Any]]:
     rows = []
     for sample in log.samples or []:
         error = ""
@@ -152,6 +177,8 @@ def rows_from_log(log: EvalLog) -> list[dict[str, Any]]:
                 input_tokens=sum(u.input_tokens for u in usage),
                 output_tokens=sum(u.output_tokens for u in usage),
                 total_tokens=sum(u.total_tokens for u in usage),
+                max_prompt_tokens=max_prompt_tokens(sample),
+                context_length=context_length,
                 wall_seconds=sample.total_time or 0.0,
                 error=error,
             )
@@ -211,6 +238,11 @@ RATE_METRICS = {
         "runs with an accepted submission",
     ),
     "gate_exhausted": (_is("gate_exhausted"), lambda r: True, "all runs"),
+    "context_risk": (
+        _is("context_risk"),
+        lambda r: r["max_prompt_tokens"] != "",
+        "runs with a model call that reported usage",
+    ),
     "rejected_at_least_once": (lambda r: r["n_rejections"] > 0, lambda r: True, "all runs"),
 }  # fmt: skip
 
@@ -237,12 +269,15 @@ def condition_summary(rows: list[dict]) -> list[dict[str, Any]]:
                 line.update(rate=count / len(members), ci_low=low, ci_high=high)
             out.append(line)
         for field in COST_FIELDS:
-            values = [r[field] for r in group]
-            out.append({
-                **base, "metric": field, "denominator": len(values),
-                "median": statistics.median(values), "mean": statistics.fmean(values),
-                "note": "per run, over all runs",
-            })  # fmt: skip
+            values = [r[field] for r in group if r[field] != ""]
+            line = {**base, "metric": field, "denominator": len(values), "note": "per run"}
+            if values:
+                line.update(
+                    median=statistics.median(values),
+                    mean=statistics.fmean(values),
+                    max=max(values),
+                )
+            out.append(line)
     return out
 
 
@@ -346,6 +381,8 @@ def summary_markdown(meta: dict, rows: list[dict], summary: list[dict], n_logs: 
         "",
         f"- commit: `{meta['commit']}` (working tree clean: {meta['worktree_clean']})",
         f"- models: {', '.join(meta['models'])}",
+        "- context length (tokens): "
+        + ", ".join(f"{m} {n}" for m, n in meta["context_length"].items()),
         f"- epochs: {meta['epochs']}; temperature: {meta['temperature']}; "
         f"task seed: {meta['seed']}; message limit: {meta['message_limit']}",
         f"- tasks ({len(meta['task_ids'])}): {', '.join(meta['task_ids'])}",
@@ -366,6 +403,10 @@ def summary_markdown(meta: dict, rows: list[dict], summary: list[dict], n_logs: 
         "one finding on the first submit call. final_unsupported: the same on the "
         "accepted submission.",
         f"- {TOKEN_NOTE}",
+        "- max_prompt_tokens: the largest prompt of any model call of the run "
+        "(input_tokens + input_tokens_cache_read of that call). context_risk: that "
+        f"value is at least {CONTEXT_RISK_NUMERATOR}/{CONTEXT_RISK_DENOMINATOR} of the "
+        "context length of the model, so an early message may have been cut.",
         "- wall_seconds is the Inspect `total_time` of the sample; samples ran one at a time.",
         "",
     ]
@@ -385,9 +426,13 @@ def summary_markdown(meta: dict, rows: list[dict], summary: list[dict], n_logs: 
             ],
         )  # fmt: skip
         md += _table(
-            ("per run", "n runs", "median", "mean"),
+            ("per run", "n runs", "median", "mean", "max"),
             [
-                (s["metric"], s["denominator"], _num(float(s["median"])), _num(s["mean"]))
+                (
+                    s["metric"], s["denominator"],
+                    _num(float(s["median"])) if "median" in s else "n/a",
+                    _num(s.get("mean")) or "n/a", _num(s.get("max")) or "n/a",
+                )
                 for s in own if s["metric"] in COST_FIELDS
             ],
         )  # fmt: skip
@@ -436,8 +481,14 @@ def summary_markdown(meta: dict, rows: list[dict], summary: list[dict], n_logs: 
 def aggregate(run_dir: Path) -> int:
     """Write the three files into run_dir. Returns the number of runs."""
     meta = json.loads((run_dir / META_FILE).read_text(encoding="utf-8"))
+    contexts = meta.get("context_length") or {}
     paths = sorted((run_dir / LOG_DIR).glob("*.json"))
-    rows = [row for path in paths for row in rows_from_log(read_eval_log(str(path)))]
+    rows = []
+    for path in paths:
+        log = read_eval_log(str(path))
+        if contexts.get(log.eval.model) is None:
+            raise ValueError(f"{META_FILE} has no context_length for {log.eval.model}")
+        rows.extend(rows_from_log(log, contexts[log.eval.model]))
     if not rows:
         raise ValueError(f"no runs found ({len(paths)} log files)")
     rows.sort(key=lambda r: (r["model"], r["task_id"], r["epoch"], r["condition"]))

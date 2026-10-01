@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import traceback
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Callable
 
 import inspect_ai
 from inspect_ai import eval
@@ -25,7 +28,12 @@ from ..tasks.spec import TaskSpec
 from . import build
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_MODEL = "ollama/qwen3.5:9b"
+# A local variant with a 16,384-token context; the Ollama default of 4,096 is too small.
+DEFAULT_MODEL = "ollama/tg-qwen3.5-9b-ctx16k"
+OLLAMA_PREFIX = "ollama/"
+# The variable the Inspect ollama provider reads; its value may end in /v1.
+OLLAMA_URL_VARIABLE = "OLLAMA_BASE_URL"
+OLLAMA_DEFAULT_URL = "http://127.0.0.1:11434"
 # DESIGN.md section 10: only these may be run while guards are still open.
 DEV_TASKS = ("seq_gc", "lit_lookup", "trap_alias")
 META_FILE = "run_meta.json"
@@ -68,6 +76,45 @@ def git_state() -> tuple[str, bool]:
     return _git("rev-parse", "HEAD").strip(), _git("status", "--porcelain").strip() == ""
 
 
+def ollama_url() -> str:
+    url = (os.environ.get(OLLAMA_URL_VARIABLE) or OLLAMA_DEFAULT_URL).rstrip("/")
+    return url.removesuffix("/v1")
+
+
+def _ollama_json(path: str, body: dict | None = None) -> Any:
+    data = None if body is None else json.dumps(body).encode()
+    request = urllib.request.Request(
+        ollama_url() + path, data=data, headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def context_length(model: str, fetch: Callable[..., Any] = _ollama_json) -> int | None:
+    """Context length the server uses for the model, or None when it cannot be read.
+
+    A loaded model reports the value in use (/api/ps). Otherwise the `num_ctx`
+    parameter of the model is read (/api/show); a model without it runs with
+    the server default, which this function cannot see.
+    """
+    if not model.startswith(OLLAMA_PREFIX):
+        return None
+    name = model.removeprefix(OLLAMA_PREFIX)
+    try:
+        for loaded in fetch("/api/ps")["models"]:
+            if loaded["name"] in (name, f"{name}:latest") and loaded.get("context_length"):
+                return int(loaded["context_length"])
+        parameters = fetch("/api/show", {"model": name}).get("parameters") or ""
+    except OSError as err:  # server down or model unknown: reported as not known
+        print(f"context length of {model} could not be read: {err}", file=sys.stderr)
+        return None
+    for line in parameters.splitlines():
+        fields = line.split()
+        if len(fields) == 2 and fields[0] == "num_ctx":
+            return int(fields[1])
+    return None
+
+
 def _split(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]
 
@@ -81,6 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0, help="task generation seed")
     parser.add_argument("--out", default=None, help="default runs/<UTC time>")
     parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument("--allow-unknown-context", action="store_true")
     args = parser.parse_args(argv)
 
     models = _split(args.models)
@@ -99,6 +147,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
+    contexts = {model: context_length(model) for model in models}
+    unknown = [model for model, length in contexts.items() if length is None]
+    if unknown and not args.allow_unknown_context:
+        print(
+            f"context length unknown for {unknown}; pass --allow-unknown-context to run "
+            "anyway (prompts longer than the context are cut without an error)",
+            file=sys.stderr,
+        )
+        return 2
+
     started = datetime.now(timezone.utc)
     out = Path(args.out or f"runs/{started.strftime('%Y%m%dT%H%M%SZ')}")
     out.mkdir(parents=True, exist_ok=False)
@@ -106,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         "commit": commit,
         "worktree_clean": clean,
         "models": models,
+        "context_length": contexts,
         "conditions": conditions,
         "temperature": build.TEMPERATURE,
         "message_limit": build.MESSAGE_LIMIT,
