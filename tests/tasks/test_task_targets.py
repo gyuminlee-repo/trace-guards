@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import dataclasses
 import io
 import json
 import math
@@ -307,6 +308,16 @@ def test_task_list_is_complete(seed):
 def test_target_matches_independent_computation(task_id, seed):
     spec, wrong = spec_and_distractors(task_id, seed)
     CHECKERS[task_id](spec, wrong)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+@pytest.mark.parametrize("task_id", list(DESIGN_TABLE))
+def test_checker_rejects_a_wrong_target(task_id, seed):
+    # A checker that never looks at the target would pass the test above for nothing.
+    spec, wrong = spec_and_distractors(task_id, seed)
+    for value in wrong.values():
+        with pytest.raises(AssertionError):
+            CHECKERS[task_id](dataclasses.replace(spec, target=value), wrong)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
