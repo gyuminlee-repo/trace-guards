@@ -25,6 +25,18 @@ Paired by task and epoch, the difference in confident wrong is -2 over 50 pairs 
 - `seq_gc` epoch 2: the gate-off run computed a wrong value and the gate-on run computed the right one. No guard fired in either run.
 - `trap_alias` epoch 2: the gate-on run was rejected once and then ran into the message limit, so it ended with no accepted submission instead of a wrong one.
 
+## Against the criteria fixed in advance
+
+`docs/DESIGN.md` section 10 named three outcomes that would count against the gate, before any run.
+
+| Criterion | Observed | Met |
+|---|---|---|
+| No reduction in confident wrong rate | 11 / 50 to 9 / 50, interval -0.10 to 0.00, and neither differing pair is a correction by the gate | yes, counts against the gate |
+| A rise in wrong abstention | 0 / 35 in both conditions | no |
+| Token cost more than doubles | median per run 1.84 times, sum over runs 1.07 times, sum without `seq_orf` 1.41 times | no overall. On `trap_alias` alone the median is 6.9 times |
+
+One of the three criteria is met. For this model and these tasks the gate is a candidate for removal as an automatic retry, and the guards remain useful as flags.
+
 ## What the gate did
 
 It fired in 6 of 50 gate-on runs.
@@ -34,7 +46,7 @@ It fired in 6 of 50 gate-on runs.
 | trap_alias | absence_control | 5 of 5 | 4 submitted `absent` again and were accepted, 1 hit the message limit. 0 became correct |
 | expr_de_count | citation_in_trace | 1 of 5 | The agent had listed the input file name as a citation. It resubmitted without it and was correct |
 
-On `trap_alias` the rejected runs read the table, searched for a locus tag that exists, obtained a hit, and submitted the same answer again. In one of those runs the control query was the very locus tag that lists the gene as a synonym; the search returned it and the run still submitted `absent`. Median tokens for that task went from 2,106 (gate off) to 14,477 (gate on).
+On `trap_alias` four of the five rejected runs read the table, searched for a locus tag that exists, obtained a hit, and submitted the same answer again. The fifth made eight more zero-hit queries and ran into the message limit. In one of those runs the control query was the very locus tag that lists the gene as a synonym; the search returned it and the run still submitted `absent`. Median tokens for that task went from 2,106 (gate off) to 14,477 (gate on).
 
 ## What the scanner saw
 
