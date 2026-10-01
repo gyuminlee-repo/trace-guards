@@ -1,0 +1,35 @@
+{
+  "commit": "6b90380f64f052c24c4bc3c2a4d43d6a28c200cf",
+  "worktree_clean": true,
+  "models": [
+    "ollama/tg-qwen3.5-9b-ctx16k",
+    "ollama/tg-gemma4-12b-ctx16k"
+  ],
+  "context_length": {
+    "ollama/tg-qwen3.5-9b-ctx16k": 16384,
+    "ollama/tg-gemma4-12b-ctx16k": 16384
+  },
+  "conditions": [
+    "gate_off",
+    "gate_on"
+  ],
+  "temperature": 0.7,
+  "message_limit": 30,
+  "max_rejections": 2,
+  "epochs": 5,
+  "seed": 0,
+  "task_ids": [
+    "seq_gc",
+    "seq_orf",
+    "expr_de_count",
+    "growth_rate",
+    "pan_core",
+    "lit_lookup",
+    "trap_missing_lit",
+    "trap_alias",
+    "trap_no_replicates",
+    "trap_truncated"
+  ],
+  "inspect_ai_version": "0.3.273",
+  "started_utc": "2026-10-01T12:39:46+00:00"
+}

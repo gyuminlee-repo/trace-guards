@@ -1,0 +1,56 @@
+model,condition,metric,count,denominator,rate,ci_low,ci_high,median,mean,max,note
+ollama/tg-gemma4-12b-ctx16k,gate_off,runs,3,,,,,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,correct,2,3,0.6667,0.2077,0.9385,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,confident_wrong,0,3,0.0000,0.0000,0.5615,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,no_accepted_submission,1,3,0.3333,0.0615,0.7923,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,abstained,0,3,0.0000,0.0000,0.5615,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,abstained_where_expected,0,0,,,,,,,runs of tasks whose expected status is cannot_determine
+ollama/tg-gemma4-12b-ctx16k,gate_off,wrong_abstention,0,3,0.0000,0.0000,0.5615,,,,runs of tasks whose expected status is not cannot_determine
+ollama/tg-gemma4-12b-ctx16k,gate_off,first_unsupported,0,2,0.0000,0.0000,0.6576,,,,runs with at least one submit call
+ollama/tg-gemma4-12b-ctx16k,gate_off,final_unsupported,0,2,0.0000,0.0000,0.6576,,,,runs with an accepted submission
+ollama/tg-gemma4-12b-ctx16k,gate_off,gate_exhausted,0,3,0.0000,0.0000,0.5615,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,context_risk,0,3,0.0000,0.0000,0.5615,,,,runs with a model call that reported usage
+ollama/tg-gemma4-12b-ctx16k,gate_off,rejected_at_least_once,0,3,0.0000,0.0000,0.5615,,,,all runs
+ollama/tg-gemma4-12b-ctx16k,gate_off,n_rejections,,3,,,,0,0.0000,0,per run
+ollama/tg-gemma4-12b-ctx16k,gate_off,input_tokens,,3,,,,7498,8534.6667,14097,per run
+ollama/tg-gemma4-12b-ctx16k,gate_off,output_tokens,,3,,,,14340,20274.3333,44330,per run
+ollama/tg-gemma4-12b-ctx16k,gate_off,total_tokens,,3,,,,75424,71421.6667,126524,per run
+ollama/tg-gemma4-12b-ctx16k,gate_off,max_prompt_tokens,,3,,,,12477,9688.3333,13563,per run
+ollama/tg-gemma4-12b-ctx16k,gate_off,wall_seconds,,3,,,,609.1060,925.8857,2024.1960,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,runs,50,,,,,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,correct,35,50,0.7000,0.5625,0.8090,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,confident_wrong,11,50,0.2200,0.1275,0.3524,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,no_accepted_submission,4,50,0.0800,0.0315,0.1884,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,abstained,8,50,0.1600,0.0834,0.2851,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,abstained_where_expected,8,15,0.5333,0.3012,0.7519,,,,runs of tasks whose expected status is cannot_determine
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,wrong_abstention,0,35,0.0000,0.0000,0.0989,,,,runs of tasks whose expected status is not cannot_determine
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,first_unsupported,5,46,0.1087,0.0473,0.2304,,,,runs with at least one submit call
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,final_unsupported,5,46,0.1087,0.0473,0.2304,,,,runs with an accepted submission
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,gate_exhausted,0,50,0.0000,0.0000,0.0713,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,context_risk,3,50,0.0600,0.0206,0.1622,,,,runs with a model call that reported usage
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,rejected_at_least_once,0,50,0.0000,0.0000,0.0713,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,n_rejections,,50,,,,0.0000,0.0000,0,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,input_tokens,,50,,,,778.5000,1401.8600,17017,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,output_tokens,,50,,,,778.5000,1711.9000,13091,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,total_tokens,,50,,,,5372.5000,17292.5800,140436,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,max_prompt_tokens,,50,,,,2142.5000,3242.3800,15946,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_off,wall_seconds,,50,,,,10.1575,27.1293,267.0460,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,runs,50,,,,,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,correct,37,50,0.7400,0.6045,0.8413,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,confident_wrong,9,50,0.1800,0.0977,0.3080,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,no_accepted_submission,4,50,0.0800,0.0315,0.1884,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,abstained,8,50,0.1600,0.0834,0.2851,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,abstained_where_expected,8,15,0.5333,0.3012,0.7519,,,,runs of tasks whose expected status is cannot_determine
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,wrong_abstention,0,35,0.0000,0.0000,0.0989,,,,runs of tasks whose expected status is not cannot_determine
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,first_unsupported,6,47,0.1277,0.0598,0.2517,,,,runs with at least one submit call
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,final_unsupported,0,46,0.0000,0.0000,0.0771,,,,runs with an accepted submission
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,gate_exhausted,0,50,0.0000,0.0000,0.0713,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,context_risk,2,50,0.0400,0.0110,0.1346,,,,runs with a model call that reported usage
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,rejected_at_least_once,6,50,0.1200,0.0562,0.2380,,,,all runs
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,n_rejections,,50,,,,0.0000,0.1200,1,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,input_tokens,,50,,,,1025.5000,2374.2800,37207,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,output_tokens,,50,,,,1042.5000,1853.2200,13760,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,total_tokens,,50,,,,9867.5000,18457.1400,163099,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,max_prompt_tokens,,50,,,,2709.5000,3652.5600,15500,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on,wall_seconds,,50,,,,12.4025,24.5431,245.7780,per run
+ollama/tg-qwen3.5-9b-ctx16k,gate_on_minus_gate_off,confident_wrong_paired_difference,-2,50,-0.0400,-0.1000,0.0000,,,,"pairs over 10 tasks; task bootstrap, 10000 resamples"
