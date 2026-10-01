@@ -1,4 +1,4 @@
-"""G3 absence_control: an absence claim needs a lookup that is shown to find things."""
+"""G3 absence_control: an absence claim needs an empty lookup that is shown to find things."""
 
 from __future__ import annotations
 
@@ -16,6 +16,10 @@ _MSG_NO_LOOKUP = (
     "absence_control: an absence claim needs at least one lookup with a search "
     "tool or python that finished without error. Run a lookup first."
 )
+_MSG_NO_EMPTY = (
+    "absence_control: an absence claim needs a lookup that came back with zero "
+    "hits. No search in this run came back empty."
+)
 _MSG_NO_CONTROL = (
     "absence_control: one empty lookup does not show that the lookup can find "
     "anything. With the same tool, run a query that returns hits or try a "
@@ -32,6 +36,11 @@ def hit_count(event: ToolEvent) -> int:
             f"{event.tool} event {event.index}: first output line is not 'hits: N'"
         )
     return int(match.group(1))
+
+
+def _has_empty(tool: str, events: list[ToolEvent]) -> bool:
+    # python output has no declared hit format; any clean call counts as a lookup.
+    return tool == "python" or any(hit_count(e) == 0 for e in events)
 
 
 def _has_control(tool: str, events: list[ToolEvent]) -> bool:
@@ -53,7 +62,10 @@ def check(
             by_tool.setdefault(event.tool, []).append(event)
     if not by_tool:
         return [Finding(GUARD, _MSG_NO_LOOKUP, {})]
-    if any(_has_control(tool, events) for tool, events in by_tool.items()):
+    # The empty lookup and its control must come from the same tool.
+    with_empty = {t: es for t, es in by_tool.items() if _has_empty(t, es)}
+    if any(_has_control(tool, events) for tool, events in with_empty.items()):
         return []
     counts = {tool: len(events) for tool, events in by_tool.items()}
-    return [Finding(GUARD, _MSG_NO_CONTROL, {"clean_lookups": counts})]
+    message = _MSG_NO_CONTROL if with_empty else _MSG_NO_EMPTY
+    return [Finding(GUARD, message, {"clean_lookups": counts})]
