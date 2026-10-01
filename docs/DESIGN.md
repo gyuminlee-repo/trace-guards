@@ -112,9 +112,13 @@ Known limit: the guard checks that the document was retrieved, not that it suppo
 
 Applies when status is `absent`.
 
-An absence claim needs both: (a) a lookup that came back empty, which is a `search_corpus` or `search_annotations` event without error whose first line is `hits: 0`, or a `python` event without error, and (b) evidence that the lookup method can find things, which is either at least one non-error event of the same tool that returned a non-empty hit list, or at least two non-error events of the same tool with different arguments. A `python` event has no hit count, so for `python` only the two-different-calls form of (b) is available. For `search_*` tools the output format declares the hit count on its first line (`hits: N`), so emptiness is read from that line and not inferred from text.
+An absence claim made after `search_corpus` or `search_annotations` lookups needs both: (a) at least one non-error event of that tool whose first line is `hits: 0`, and (b) at least one non-error event of the same tool that returned one or more hits. Part (b) is a positive control: an empty lookup is evidence of absence only if the same lookup method has been shown to find something that exists. Emptiness is read from the `hits: N` line and not inferred from text.
 
-Known limit: two different empty queries satisfy (b) even when both are poor queries. The guard forces a second look; it does not judge whether the second look was a good one.
+An absence claim with no lookup event of any kind fires. An absence claim backed only by `python` events is not judged: `python` output has no declared hit count, so the guard has nothing structured to read and lets it pass.
+
+The rejection message names what is missing. It does not suggest a query, a column, or a file to read.
+
+Known limit: the control shows that the tool can find something, not that it would have found the thing asked about. A lookup that is blind to where the answer sits (a synonym column, a different spelling) still passes once any unrelated hit exists.
 
 ### G4 artifact_and_failure
 
@@ -208,20 +212,20 @@ Every target is produced by the generator and checked by a second, independently
 
 ### v0 run
 
-Models: `ollama/qwen3.5:9b` (primary) and `ollama/gemma4:12b` (secondary). Temperature 0.7. Five epochs per task per condition. 10 tasks x 2 conditions x 5 epochs x 2 models = 200 runs. Message limit 30 per run.
+Models: qwen3.5 9b (primary) and gemma4 12b (secondary), each served by Ollama through a local variant with a 16,384-token context (`ollama/tg-qwen3.5-9b-ctx16k`, `ollama/tg-gemma4-12b-ctx16k`; created with `FROM <base model>` and `PARAMETER num_ctx 16384`). The default Ollama context of 4,096 tokens is too small: a long run would lose its early messages, and gate-on runs are the longer ones. The context length is written to the run metadata, and the largest prompt of each run is checked against it. Samples run one at a time. Temperature 0.7. Five epochs per task per condition. 10 tasks x 2 conditions x 5 epochs x 2 models = 200 runs. Message limit 30 per run.
 
 ### Outcomes
 
 Primary: confident wrong rate, per condition.
 
-Secondary: accuracy; unsupported submission rate (first submission); abstention rate on tasks whose expected status is `cannot_determine`; wrong abstention rate on ordinary tasks (the cost side of a gate); total tokens and wall time per run; rejections per run.
+Secondary: accuracy; unsupported submission rate (first submission); abstention rate on tasks whose expected status is `cannot_determine`; wrong abstention rate on tasks whose expected status is not `cannot_determine` (the cost side of a gate); total tokens and wall time per run; rejections per run.
 
 ### Analysis plan, fixed before running
 
 - Unit is the run. Comparison is paired by (model, task, epoch index).
 - Report counts and rates with Wilson 95% intervals per condition and model. Report the paired difference with a bootstrap 95% interval over tasks (resample tasks, not runs, because runs within a task are not independent).
 - With ten tasks the task-level bootstrap is coarse. v0 values are preliminary and are labelled so.
-- Guards are frozen at the commit recorded in the run metadata. If a guard is changed after looking at experiment output, the run is repeated and the earlier output is kept under `runs/` with a note.
+- Guards are frozen at the commit recorded in the run metadata. A pilot on the three development tasks precedes the freeze; pilot values are kept under `reports/` and are never reported as evidence for or against the gate. If a guard is changed after looking at experiment output, the run is repeated and the earlier output is kept under `runs/` with a note.
 - Tasks are split by id: `seq_gc`, `lit_lookup`, `trap_alias` may be used while developing guards and prompts. The other seven are not run until guards are frozen.
 - Every reported number names what was counted and its denominator.
 
@@ -260,3 +264,4 @@ Lane 2 depends only on the submission fields. To avoid a blocking dependency lan
 
 - 2026-10-01: initial design.
 - 2026-10-01 (v0.1, before any experiment run): `cannot_determine` passes every guard including G4, resolving a contradiction between sections 5 and 6. G3 now requires an empty lookup in addition to the control. Added the prompt-exemption limit of G1, input file conventions, the id-field rule of G2, the `trace_setup()` step, and the target format for citation tasks. All of these were raised by the implementation lanes.
+- 2026-10-01 (v0.2, after the development-task pilot, before the freeze and before any run of the seven held-out tasks): G3 no longer accepts two different empty queries as a control. In the pilot a rejected run made more empty queries and then submitted `absent` unchanged. The control must now be a hit from the same tool. Absence claims backed only by `python` are left unjudged. Models are served with a 16,384-token context. The wrong-abstention denominator is stated by expected status.
