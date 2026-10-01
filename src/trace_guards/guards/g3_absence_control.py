@@ -1,29 +1,37 @@
-"""G3 absence_control: an absence claim needs an empty lookup that is shown to find things."""
+"""G3 absence_control: an empty search supports an absence claim only with a positive control.
+
+A claim that rests on python alone is not judged: python output has no
+declared hit count, so there is nothing structured to read and it passes.
+python events never count as the empty lookup or as the control of a search.
+"""
 
 from __future__ import annotations
 
-import json
 import re
 
 from ..trace import Finding, Submission, ToolEvent, Trace
 
 GUARD = "absence_control"
-LOOKUP_TOOLS = ("search_corpus", "search_annotations", "python")
+SEARCH_TOOLS = ("search_corpus", "search_annotations")
 
 _HITS_LINE = re.compile(r"hits: (\d+)")
 
 _MSG_NO_LOOKUP = (
-    "absence_control: an absence claim needs at least one lookup with a search "
-    "tool or python that finished without error. Run a lookup first."
+    "absence_control: an absence claim needs a lookup that finished without "
+    "error. This run has none."
+)
+_MSG_NO_CLEAN_SEARCH = (
+    "absence_control: every search in this run ended with an error, so no "
+    "search supports the absence claim."
 )
 _MSG_NO_EMPTY = (
-    "absence_control: an absence claim needs a lookup that came back with zero "
+    "absence_control: an absence claim needs a search that came back with zero "
     "hits. No search in this run came back empty."
 )
 _MSG_NO_CONTROL = (
-    "absence_control: one empty lookup does not show that the lookup can find "
-    "anything. With the same tool, run a query that returns hits or try a "
-    "different query, then submit again."
+    "absence_control: a search with zero hits is evidence of absence only when "
+    "the same search tool has found an existing item in this run. It has not, "
+    "so the empty search does not support the claim."
 )
 
 
@@ -38,34 +46,27 @@ def hit_count(event: ToolEvent) -> int:
     return int(match.group(1))
 
 
-def _has_empty(tool: str, events: list[ToolEvent]) -> bool:
-    # python output has no declared hit format; any clean call counts as a lookup.
-    return tool == "python" or any(hit_count(e) == 0 for e in events)
-
-
-def _has_control(tool: str, events: list[ToolEvent]) -> bool:
-    # python output has no declared hit format, so only distinct queries count.
-    if tool != "python" and any(hit_count(e) > 0 for e in events):
-        return True
-    queries = {json.dumps(e.arguments, sort_keys=True, default=str) for e in events}
-    return len(queries) >= 2
-
-
 def check(
     trace: Trace, submission: Submission, *, requires_citation: bool = False
 ) -> list[Finding]:
     if submission.status != "absent":
         return []
-    by_tool: dict[str, list[ToolEvent]] = {}
-    for event in trace.events:
-        if event.tool in LOOKUP_TOOLS and not event.error:
-            by_tool.setdefault(event.tool, []).append(event)
-    if not by_tool:
+    searches = [e for e in trace.events if e.tool in SEARCH_TOOLS]
+    if not searches:
+        if any(e.tool == "python" and not e.error for e in trace.events):
+            return []  # python only: not judged
         return [Finding(GUARD, _MSG_NO_LOOKUP, {})]
-    # The empty lookup and its control must come from the same tool.
-    with_empty = {t: es for t, es in by_tool.items() if _has_empty(t, es)}
-    if any(_has_control(tool, events) for tool, events in with_empty.items()):
+
+    # Per search tool: hit counts of its calls that finished without error.
+    counts: dict[str, list[int]] = {}
+    for event in searches:
+        if not event.error:
+            counts.setdefault(event.tool, []).append(hit_count(event))
+    if not counts:
+        return [Finding(GUARD, _MSG_NO_CLEAN_SEARCH, {})]
+    # The empty search and its control must come from the same tool.
+    with_empty = [tool for tool, hits in counts.items() if 0 in hits]
+    if any(max(counts[tool]) > 0 for tool in with_empty):
         return []
-    counts = {tool: len(events) for tool, events in by_tool.items()}
     message = _MSG_NO_CONTROL if with_empty else _MSG_NO_EMPTY
-    return [Finding(GUARD, message, {"clean_lookups": counts})]
+    return [Finding(GUARD, message, {"hit_counts": counts})]
