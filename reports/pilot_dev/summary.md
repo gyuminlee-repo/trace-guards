@@ -16,7 +16,7 @@
 - abstained: the accepted submission has status `cannot_determine`. wrong_abstention: abstained on a task whose expected status is not `cannot_determine`.
 - A run without an accepted submission is graded incorrect and is counted under no_accepted_submission only, not under confident_wrong or abstained.
 - first_unsupported: the scanner (the same guards as the gate) has at least one finding on the first submit call. final_unsupported: the same on the accepted submission.
-- `total_tokens` is the Inspect `total_tokens` of the run, summed over every model call of the run. With the Ollama provider it equals input_tokens + output_tokens + input_tokens_cache_read; `input_tokens` counts only the prompt tokens that were not read from the prompt cache, so it is far smaller than the prompt that the model saw.
+- `total_tokens` is the Inspect `total_tokens` of the run, summed over every model call of the run. In the Ollama logs checked so far it equals input_tokens + output_tokens + input_tokens_cache_read; `input_tokens` counts only the prompt tokens that were not read from the prompt cache, so it is far smaller than the prompt that the model saw.
 - wall_seconds is the Inspect `total_time` of the sample; samples ran one at a time.
 
 ## ollama/qwen3.5:9b, gate_off
