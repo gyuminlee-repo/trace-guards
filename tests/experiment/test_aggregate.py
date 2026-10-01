@@ -326,7 +326,7 @@ def test_summary_markdown_names_denominators_and_avoids_banned_text() -> None:
     assert "| confident_wrong | 1 / 3 |" in text
     assert "| abstained_where_expected | 0 / 0 | n/a | n/a |" in text
     assert "No pair has both conditions." in text
-    assert "—" not in text
+    assert chr(0x2014) not in text
     assert "results" not in text.lower()
 
 
