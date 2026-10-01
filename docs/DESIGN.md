@@ -98,6 +98,8 @@ Non-numeric answers (a gene name, a strain id) must appear as a whole token in s
 
 Known limit: a value computed wrongly by code the agent wrote is "supported". On 2026-10-01 a probe run counted the trailing newline as a base and submitted 0.5882 for a sequence whose GC fraction is 0.625. G1 cannot see that.
 
+Known limit: the prompt exemption is a hole. A number that the prompt itself mentions passes without tool evidence, so a prompt that names a wrong value disarms G1 for that value.
+
 ### G2 citation_in_trace
 
 Applies when `citations` is non-empty or the task requires a citation.
@@ -110,13 +112,13 @@ Known limit: the guard checks that the document was retrieved, not that it suppo
 
 Applies when status is `absent`.
 
-An absence claim needs both: (a) at least one lookup tool event (`search_corpus`, `search_annotations`, or a `python` event) that ran without error, and (b) evidence that the lookup method can find things, which is either at least one lookup event of the same tool that returned a non-empty hit list, or at least two lookup events of the same tool with different query arguments. For `search_*` tools the output format declares the hit count on its first line (`hits: N`), so emptiness is read from that line and not inferred from text.
+An absence claim needs both: (a) a lookup that came back empty, which is a `search_corpus` or `search_annotations` event without error whose first line is `hits: 0`, or a `python` event without error, and (b) evidence that the lookup method can find things, which is either at least one non-error event of the same tool that returned a non-empty hit list, or at least two non-error events of the same tool with different arguments. A `python` event has no hit count, so for `python` only the two-different-calls form of (b) is available. For `search_*` tools the output format declares the hit count on its first line (`hits: N`), so emptiness is read from that line and not inferred from text.
 
-Known limit: two different empty queries satisfy (b) even when both are poor queries.
+Known limit: two different empty queries satisfy (b) even when both are poor queries. The guard forces a second look; it does not judge whether the second look was a good one.
 
 ### G4 artifact_and_failure
 
-Applies always.
+Applies when status is not `cannot_determine`.
 
 Fires when a path in `files` is missing from `workdir_files` or has size 0. Fires when status is `answered` and the last `python` event before submission has `error == True` and no later non-error event exists.
 
@@ -138,9 +140,15 @@ Inspect `attempts` is not used: it retries on scorer output, which would leak th
 |---|---|
 | `python(code)` | Runs code in the sample working directory. Wrapped to record output and error flag |
 | `search_corpus(query)` | Keyword search over a local JSON corpus of document records. First output line is `hits: N`, then one line per hit: `id | title` |
-| `read_document(id)` | Returns the stored abstract text for an id, or an error for an unknown id |
-| `search_annotations(query)` | Exact, case-sensitive match on the `gene` column of the task annotation table. First line `hits: N`. Does not search synonyms; the synonym column is visible only by reading the file |
+| `read_document(id)` | First line `id | title`, then the stored abstract text. Error for an unknown id |
+| `search_annotations(query)` | Exact, case-sensitive match on the `gene` column of the task annotation table. First line `hits: N`, then one line per hit: `locus_tag | gene | product`. Does not search synonyms; the synonym column is visible only by reading the file |
 | `submit(status, answer, citations, files)` | Section 5 |
+
+Input file conventions: `corpus.json` is a list of `{id, title, abstract}`; `annotations.tsv` has columns `locus_tag, gene, start, end, strand, product, synonyms` with `;` between synonyms; `de_results.tsv` has columns `gene, baseMean, log2FoldChange, lfcSE, pvalue, padj`.
+
+G2 reads document ids only from the id field of retrieval output (the part before ` | `), not from abstract or title text.
+
+The gate needs the prompt and the citation requirement at run time. A `trace_setup()` solver step placed before the agent writes both into the sample store.
 
 No tool has network access. Sandbox is Inspect `local` (temporary directory per sample). Docker is not installed on the development machine; container isolation is a stated limit of v0.
 
@@ -166,7 +174,7 @@ class TaskSpec:
     tools: tuple[str, ...]    # tool names offered
 ```
 
-`grade(spec, submission) -> bool` is a pure function: status must equal `expected_status`; for `answered`, the first number in `answer` must be within `tolerance` of `target` (or exact token match for non-numeric); for literature tasks with `requires_citation`, `citations` must contain the target document id.
+`grade(spec, submission) -> bool` is a pure function: status must equal `expected_status`; for `answered`, the first number in `answer` must be within `tolerance` of `target` (or exact token match for non-numeric); for literature tasks with `requires_citation`, `citations` must contain the target document id. For those tasks `target` is written as `"<value> <document id>"` and read through `target_value(spec)` and `target_citation(spec)`. A task is graded numerically when `tolerance` is not None, otherwise by whole-token match.
 
 ### Ground truth rule
 
@@ -251,3 +259,4 @@ Lane 2 depends only on the submission fields. To avoid a blocking dependency lan
 ## 13. Change log
 
 - 2026-10-01: initial design.
+- 2026-10-01 (v0.1, before any experiment run): `cannot_determine` passes every guard including G4, resolving a contradiction between sections 5 and 6. G3 now requires an empty lookup in addition to the control. Added the prompt-exemption limit of G1, input file conventions, the id-field rule of G2, the `trace_setup()` step, and the target format for citation tasks. All of these were raised by the implementation lanes.
