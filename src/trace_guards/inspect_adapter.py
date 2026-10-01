@@ -157,6 +157,11 @@ def _record(tool_name: str, arguments: dict, output: str, error: bool) -> None:
     s.set(EVENTS_KEY, s.get(EVENTS_KEY, []) + [event])
 
 
+def _error_text(err: Exception) -> str:
+    """Text of a failed call for the event record; the call is re-raised by the caller."""
+    return err.message if isinstance(err, ToolError) else f"{type(err).__name__}: {err}"
+
+
 async def _read_json_records(path: str) -> list[dict]:
     return json.loads(await sandbox().read_file(path))
 
@@ -178,6 +183,9 @@ def recorded_python(timeout: int = 60) -> Tool:
         except TimeoutError:
             _record("python", arguments, "timed out", True)
             raise
+        except Exception as err:
+            _record("python", arguments, _error_text(err), True)
+            raise
         output = f"{result.stderr}\n{result.stdout}" if result.stderr else result.stdout
         _record("python", arguments, output, not result.success)
         return output
@@ -197,11 +205,11 @@ def search_corpus(corpus_file: str = "corpus.json") -> Tool:
           query: Words to search for, separated by spaces.
         """
         arguments = {"query": query}
-        records = await _read_json_records(corpus_file)
         try:
+            records = await _read_json_records(corpus_file)
             output = search_corpus_text(records, query)
-        except ToolError as err:
-            _record("search_corpus", arguments, err.message, True)
+        except Exception as err:
+            _record("search_corpus", arguments, _error_text(err), True)
             raise
         _record("search_corpus", arguments, output, False)
         return output
@@ -218,11 +226,11 @@ def read_document(corpus_file: str = "corpus.json") -> Tool:
           id: Document id as shown by search_corpus.
         """
         arguments = {"id": id}
-        records = await _read_json_records(corpus_file)
         try:
+            records = await _read_json_records(corpus_file)
             output = read_document_text(records, id)
-        except ToolError as err:
-            _record("read_document", arguments, err.message, True)
+        except Exception as err:
+            _record("read_document", arguments, _error_text(err), True)
             raise
         _record("read_document", arguments, output, False)
         return output
@@ -241,9 +249,14 @@ def search_annotations(annotation_file: str = "annotations.tsv") -> Tool:
         Args:
           query: Gene name.
         """
-        table = await sandbox().read_file(annotation_file)
-        output = search_annotations_text(table, query)
-        _record("search_annotations", {"query": query}, output, False)
+        arguments = {"query": query}
+        try:
+            table = await sandbox().read_file(annotation_file)
+            output = search_annotations_text(table, query)
+        except Exception as err:
+            _record("search_annotations", arguments, _error_text(err), True)
+            raise
+        _record("search_annotations", arguments, output, False)
         return output
 
     return execute

@@ -1,0 +1,13 @@
+model,task_id,kind,trap,epoch,condition,final_status,expected_status,correct,confident_wrong,abstained,wrong_abstention,n_submit_calls,n_rejections,gate_exhausted,first_findings,final_findings,first_unsupported,n_tool_events,input_tokens,output_tokens,total_tokens,wall_seconds,accepted_submission_present,error
+ollama/qwen3.5:9b,lit_lookup,ordinary,,1,gate_off,answered,answered,1,0,0,0,1,0,0,,,0,3,1135,551,5277,6.6820,1,
+ollama/qwen3.5:9b,lit_lookup,ordinary,,1,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,3,269,435,3779,5.0420,1,
+ollama/qwen3.5:9b,lit_lookup,ordinary,,2,gate_off,answered,answered,1,0,0,0,1,0,0,,,0,3,280,636,5509,6.8650,1,
+ollama/qwen3.5:9b,lit_lookup,ordinary,,2,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,2,178,381,3499,4.2970,1,
+ollama/qwen3.5:9b,seq_gc,ordinary,,1,gate_off,answered,answered,0,1,0,0,1,0,0,,,0,1,97,1273,3355,13.5380,1,
+ollama/qwen3.5:9b,seq_gc,ordinary,,1,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,1,67,634,2672,6.7200,1,
+ollama/qwen3.5:9b,seq_gc,ordinary,,2,gate_off,answered,answered,0,1,0,0,1,0,0,,,0,1,65,587,2583,6.3920,1,
+ollama/qwen3.5:9b,seq_gc,ordinary,,2,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,3,361,1394,7454,14.5770,1,
+ollama/qwen3.5:9b,trap_alias,trap,alias_search,1,gate_off,absent,answered,0,1,0,0,1,0,0,absence_control,absence_control,1,1,876,208,2046,2.8700,1,
+ollama/qwen3.5:9b,trap_alias,trap,alias_search,1,gate_on,absent,answered,0,1,0,0,2,1,0,absence_control,,1,4,310,641,6814,7.5990,1,
+ollama/qwen3.5:9b,trap_alias,trap,alias_search,2,gate_off,absent,answered,0,1,0,0,1,0,0,absence_control,absence_control,1,1,24,361,2331,4.0130,1,
+ollama/qwen3.5:9b,trap_alias,trap,alias_search,2,gate_on,absent,answered,0,1,0,0,2,1,0,absence_control,,1,7,767,1641,18708,19.0510,1,

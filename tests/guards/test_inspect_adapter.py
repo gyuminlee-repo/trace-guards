@@ -146,3 +146,80 @@ def test_trace_from_store_cuts_events_at_the_submission() -> None:
     assert [bool(run_all(*ia.trace_from_store(data, "t", i))) for i in (0, 1)] == [True, False]
     with pytest.raises(IndexError):
         ia.trace_from_store({ia.PROMPT_KEY: "p"}, "t")
+
+
+def test_failed_tool_calls_are_recorded_as_error_events(tmp_path) -> None:
+    """Missing input files and a python timeout must leave error events in the store.
+
+    Driven by Inspect's scripted mock model in a local sandbox; no real model.
+    """
+    from inspect_ai import Task, eval
+    from inspect_ai.agent import react
+    from inspect_ai.dataset import Sample
+    from inspect_ai.model import ModelOutput, ModelUsage, get_model
+
+    calls = iter(
+        [
+            ("search_corpus", {"query": "growth"}),
+            ("read_document", {"id": "D1"}),
+            ("search_annotations", {"query": "dnaA"}),
+            ("python", {"code": "import time\ntime.sleep(30)"}),
+            ("python", {"code": "raise SystemExit(3)"}),
+            ("python", {"code": "print('ok')"}),
+            ("submit", {"status": "cannot_determine", "answer": ""}),
+        ]
+    )
+
+    def respond(input, tools, tool_choice, config):
+        name, arguments = next(calls)
+        output = ModelOutput.for_tool_call("mockllm/model", name, arguments)
+        # Explicit usage; without it mockllm downloads a tokenizer to count.
+        output.usage = ModelUsage(input_tokens=1, output_tokens=1, total_tokens=2)
+        return output
+
+    task = Task(
+        # No corpus.json and no annotations.tsv in the working directory.
+        dataset=[Sample(id="s", input="prompt", files={"other.txt": "x"})],
+        solver=[
+            ia.trace_setup(),
+            react(
+                tools=[
+                    ia.recorded_python(timeout=1),
+                    ia.search_corpus(),
+                    ia.read_document(),
+                    ia.search_annotations(),
+                ],
+                submit=ia.agent_submit(True),
+            ),
+        ],
+        sandbox="local",
+        message_limit=30,
+    )
+    (log,) = eval(
+        task,
+        model=get_model("mockllm/model", custom_outputs=respond),
+        log_dir=str(tmp_path),
+        log_format="json",
+        display="none",
+    )
+    assert log.status == "success"
+    sample = log.samples[0]
+    assert sample.error is None
+    events = sample.store[ia.EVENTS_KEY]
+    assert [(e["tool"], e["error"]) for e in events] == [
+        ("search_corpus", True),
+        ("read_document", True),
+        ("search_annotations", True),
+        ("python", True),
+        ("python", True),
+        ("python", False),
+    ]
+    assert events[0]["arguments"] == {"query": "growth"}
+    assert all(e["output"] for e in events[:4])
+    assert events[3]["output"] == "timed out"
+    assert events[5]["output"] == "ok\n"
+    # The failed calls reached the agent as tool errors, not as silent successes.
+    tool_messages = [m for m in sample.messages if m.role == "tool"]
+    assert [m.error is not None for m in tool_messages[:4]] == [True] * 4
+    trace, _ = ia.trace_from_sample(sample)
+    assert len(trace.events) == 6
