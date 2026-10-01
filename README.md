@@ -24,7 +24,8 @@ qwen3.5 9b through Ollama, 10 tasks x 5 epochs x 2 conditions = 100 runs, guards
 
 - The gate did not reduce confident wrong submissions: 11 of 50 runs with the gate off, 9 of 50 with it on, and neither of the two differing pairs was the gate correcting an answer.
 - The gate fired in 6 of 50 runs. On the trap where a zero-hit search suggests a gene is absent, all 5 runs were rejected; 4 found a way to satisfy the control and submitted the same wrong answer, at about seven times the tokens.
-- Used as a scanner, the guards flagged 5 of the 11 confident wrong submissions and none of the 35 correct ones.
+- On the seven tasks held out until the guards were frozen, confident wrong submissions were 5 of 35 in both conditions and no guard fired on any of them.
+- Used as a scanner, the guards flagged 5 of the 11 confident wrong submissions and none of the 35 correct ones, but all five flags fall on one development task.
 - The larger share of confident wrong submissions (6 of 11) were wrong computations whose value did appear in tool output. An evidence check cannot see those.
 
 These are preliminary values from one model and ten tasks.
