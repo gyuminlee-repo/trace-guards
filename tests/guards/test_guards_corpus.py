@@ -17,6 +17,7 @@ from trace_guards.guards import (  # noqa: E402
     g2_citation_in_trace,
     g3_absence_control,
     g4_artifact_and_failure,
+    g5_silent_discard,
     run_all,
 )
 from trace_guards.trace import submission_from_dict, trace_from_dict  # noqa: E402
@@ -28,6 +29,7 @@ GUARDS = {
     "g2_citation_in_trace": g2_citation_in_trace,
     "g3_absence_control": g3_absence_control,
     "g4_artifact_and_failure": g4_artifact_and_failure,
+    "g5_silent_discard": g5_silent_discard,
 }
 
 

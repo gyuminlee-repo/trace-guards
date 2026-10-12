@@ -18,6 +18,7 @@ from inspect_ai.solver import TaskState
 from inspect_ai.tool import Tool
 
 from .. import inspect_adapter as ia
+from ..guards import VERSIONS
 from ..tasks.spec import TaskSpec, grade
 
 CONDITIONS = ("gate_off", "gate_on")
@@ -70,7 +71,9 @@ def accepted_submission(spec: TaskSpec) -> Scorer:
     return score
 
 
-def build_task(spec: TaskSpec, condition: str) -> Task:
+def build_task(spec: TaskSpec, condition: str, *, guard_version: str = "v0") -> Task:
+    if guard_version not in VERSIONS:
+        raise ValueError(f"unknown guard version: {guard_version}")
     if condition not in CONDITIONS:
         raise ValueError(f"condition must be one of {CONDITIONS}, got {condition!r}")
     sample = Sample(
@@ -82,6 +85,7 @@ def build_task(spec: TaskSpec, condition: str) -> Task:
             "kind": spec.kind,
             "trap": spec.trap,
             "expected_status": spec.expected_status,
+            "guard_version": guard_version,
         },
     )
     return Task(
@@ -98,5 +102,5 @@ def build_task(spec: TaskSpec, condition: str) -> Task:
         sandbox="local",
         message_limit=MESSAGE_LIMIT,
         config=GenerateConfig(temperature=TEMPERATURE),
-        metadata={"task_id": spec.id, "condition": condition},
+        metadata={"task_id": spec.id, "condition": condition, "guard_version": guard_version},
     )

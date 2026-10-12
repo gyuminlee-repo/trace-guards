@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from trace_guards.tasks.generators import (
     expr_de_count,
     growth_rate,
@@ -28,6 +31,18 @@ GENERATORS = (
     trap_no_replicates,
     trap_truncated,
 )
+
+V1_TASK_DIR = Path(__file__).with_name("data")
+
+
+def fixed_specs(suite: str, seed: int = 0) -> list[TaskSpec]:
+    if suite not in ("v1_holdout", "v1_control") or seed != 0:
+        raise ValueError("fixed v1 suites require a known suite and seed zero")
+    rows = json.loads((V1_TASK_DIR / f"{suite}.json").read_text(encoding="utf-8"))
+    specs = [TaskSpec(**(row | {"tools": tuple(row["tools"])})) for row in rows]
+    if not specs or len({s.id for s in specs}) != len(specs):
+        raise ValueError("fixed suite must contain unique nonempty task ids")
+    return specs
 
 
 def all_specs(seed: int = 0) -> list[TaskSpec]:

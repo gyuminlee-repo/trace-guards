@@ -23,7 +23,8 @@ from typing import Any, Callable
 import inspect_ai
 from inspect_ai import eval
 
-from ..tasks.registry import all_specs
+from ..tasks.registry import all_specs, fixed_specs
+from ..guards import VERSIONS
 from ..tasks.spec import TaskSpec
 from . import build
 
@@ -45,6 +46,8 @@ def holdout_tasks(seed: int = 0) -> tuple[str, ...]:
 
 
 def select_specs(tasks: str, seed: int) -> list[TaskSpec]:
+    if tasks in ("v1_holdout", "v1_control"):
+        return fixed_specs(tasks, seed)
     specs = {s.id: s for s in all_specs(seed)}
     if tasks == "all":
         ids = list(specs)
@@ -66,7 +69,7 @@ def select_specs(tasks: str, seed: int) -> list[TaskSpec]:
 
 def _git(*args: str) -> str:
     done = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), *args], capture_output=True, text=True, check=True
+        ["/usr/bin/git", "-C", str(REPO_ROOT), *args], capture_output=True, text=True, check=True
     )
     return done.stdout
 
@@ -122,14 +125,19 @@ def _split(value: str) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--models", default=DEFAULT_MODEL, help="comma separated")
-    parser.add_argument("--tasks", required=True, help="comma separated ids, or all, dev, holdout")
+    parser.add_argument("--tasks", required=True, help="comma separated v0 ids, or all, dev, holdout, v1_holdout, v1_control")
     parser.add_argument("--epochs", type=int, required=True)
+    parser.add_argument("--guard-version", choices=VERSIONS, default="v0")
+    parser.add_argument("--plan-only", action="store_true", help="print task/condition plan without contacting a model")
     parser.add_argument("--conditions", default=",".join(build.CONDITIONS))
     parser.add_argument("--seed", type=int, default=0, help="task generation seed")
     parser.add_argument("--out", default=None, help="default runs/<UTC time>")
     parser.add_argument("--allow-dirty", action="store_true")
     parser.add_argument("--allow-unknown-context", action="store_true")
     args = parser.parse_args(argv)
+
+    if args.tasks.startswith("v1_") and args.guard_version != "v1":
+        parser.error("v1 task suites require --guard-version v1")
 
     models = _split(args.models)
     conditions = _split(args.conditions)
@@ -147,6 +155,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
+    if args.plan_only:
+        print(json.dumps({"commit": commit, "worktree_clean": clean,
+                          "guard_version": args.guard_version, "models": models,
+                          "task_ids": [s.id for s in specs], "conditions": conditions,
+                          "epochs": args.epochs,
+                          "runs": len(models) * len(specs) * len(conditions) * args.epochs}))
+        return 0
+
     contexts = {model: context_length(model) for model in models}
     unknown = [model for model, length in contexts.items() if length is None]
     if unknown and not args.allow_unknown_context:
@@ -162,6 +178,7 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=False)
     meta = {
         "commit": commit,
+        "guard_version": args.guard_version,
         "worktree_clean": clean,
         "models": models,
         "context_length": contexts,
@@ -184,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"running {label}: {len(specs)} tasks x {args.epochs} epochs", flush=True)
             try:
                 logs = eval(
-                    [build.build_task(spec, condition) for spec in specs],
+                    [build.build_task(spec, condition, guard_version=args.guard_version) for spec in specs],
                     model=model,
                     epochs=args.epochs,
                     log_dir=str(out / LOG_DIR),
