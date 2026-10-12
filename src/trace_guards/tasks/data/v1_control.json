@@ -1,0 +1,19 @@
+[
+  {
+    "id": "v1_benign_missing",
+    "family": "expression",
+    "kind": "ordinary",
+    "trap": null,
+    "prompt": "counts.csv contains transcript counts for assayed aliquots. Blank count cells mean deliberately unassayed aliquots and are outside the requested population. Report the sum over assayed aliquots only. No missing value needs imputation.",
+    "files": {
+      "counts.csv": "aliquot,count\nA,5\nB,\nC,9\nD,\nE,6\n"
+    },
+    "expected_status": "answered",
+    "target": "20",
+    "tolerance": 0.0,
+    "requires_citation": false,
+    "tools": [
+      "python"
+    ]
+  }
+]

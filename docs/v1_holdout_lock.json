@@ -1,0 +1,16 @@
+{
+  "guard_lock_commit": "bdbe6af0204b9884ddb561e5956b6b8595aea30a",
+  "seed": 0,
+  "epochs": 5,
+  "conditions": [
+    "gate_off",
+    "gate_on"
+  ],
+  "primary_runs": 30,
+  "supplemental_runs": 10,
+  "sha256": {
+    "src/trace_guards/tasks/data/v1_holdout.json": "95d358bc0e1c8e3a60073204c5bbea325d103c402e8747a659f572a9c478ad1f",
+    "src/trace_guards/tasks/data/v1_control.json": "c7806f52c6c152fa69a0630530ab81beb8623a8955dd26c58252bf2eace4e8ea",
+    "src/trace_guards/tasks/generators/v1_holdout.py": "3fee87af127ab2239bdc5a2269c478ab57169db57f2bb24f3d875985f8da7281"
+  }
+}

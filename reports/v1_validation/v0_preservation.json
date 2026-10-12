@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "archive_files_unchanged": 25,
+  "samples_by_model": {
+    "ollama/tg-qwen3.5-9b-ctx16k": 100,
+    "ollama/tg-gemma4-12b-ctx16k": 3
+  },
+  "qwen_rows_identical": 100,
+  "rows_sha256": "f7ee43ba77a775a22b2a99572c5c3b5a3eaec3f483cfd383036c26acf1aa3f8f"
+}
