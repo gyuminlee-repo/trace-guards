@@ -63,7 +63,7 @@ The runner refuses to start from a dirty working tree, so that the recorded comm
 
 ## Limits
 
-Ten tasks, generated data, one small local model, one task seed. Local sandbox without container isolation. Guards catch missing evidence; they do not catch a wrong choice of what to compute.
+Ten tasks, generated data, one small local model, one task seed. Local sandbox without container isolation. Guards catch missing evidence; they do not catch a wrong computation that carries evidence. Every confident wrong submission on the held-out tasks was of that kind: the agent dropped the unparsable rows of a table, counted the rest, and the count it submitted was in its own tool output.
 
 ## Provenance
 
