@@ -67,7 +67,8 @@ TOKEN_NOTE = (
 def _guards_at(store: Mapping[str, Any], task_id: str, index: int) -> str:
     trace, submission = ia.trace_from_store(store, task_id, index)
     findings = run_all(
-        trace, submission, requires_citation=store[ia.REQUIRES_CITATION_KEY]
+        trace, submission, requires_citation=store[ia.REQUIRES_CITATION_KEY],
+        guard_version=store.get(ia.GUARD_VERSION_KEY, "v0"),
     )
     return ";".join(dict.fromkeys(f.guard for f in findings))
 

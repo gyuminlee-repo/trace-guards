@@ -36,6 +36,13 @@ That an evidence gate can reduce false completion has been reported before, in c
 
 ## Run it
 
+The opt-in silent-discard v1 experiment is preregistered in
+[`docs/DESIGN_v1.md`](docs/DESIGN_v1.md). G5 adds a conservative Python AST
+check for explicit discard operations. v0 remains the default. The three new
+corrupted tasks and separate benign control are fixed after the guard lock.
+See [`docs/V1_RUNBOOK.md`](docs/V1_RUNBOOK.md) for clean-checkout validation and
+the parent-owned paired Ollama commands. No v1 model outcome is reported here.
+
 Requirements: Python 3.11 or later, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and an Ollama server with a tool-calling model.
 
 ```bash

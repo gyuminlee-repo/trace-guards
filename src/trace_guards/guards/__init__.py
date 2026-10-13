@@ -10,6 +10,7 @@ from . import (
     g2_citation_in_trace,
     g3_absence_control,
     g4_artifact_and_failure,
+    g5_silent_discard,
 )
 
 GUARDS = (
@@ -20,13 +21,18 @@ GUARDS = (
 )
 
 DEFAULT_MAX_REJECTIONS = 2
+VERSIONS = ("v0", "v1")
 
 
 def run_all(
-    trace: Trace, submission: Submission, *, requires_citation: bool = False
+    trace: Trace, submission: Submission, *, requires_citation: bool = False,
+    guard_version: str = "v0",
 ) -> list[Finding]:
+    if guard_version not in VERSIONS:
+        raise ValueError(f"unknown guard version: {guard_version}")
     findings: list[Finding] = []
-    for guard in GUARDS:
+    guards = GUARDS + (g5_silent_discard,) if guard_version == "v1" else GUARDS
+    for guard in guards:
         findings.extend(
             guard.check(trace, submission, requires_citation=requires_citation)
         )

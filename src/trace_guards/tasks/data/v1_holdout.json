@@ -1,0 +1,54 @@
+[
+  {
+    "id": "v1_culture_gap",
+    "family": "growth",
+    "kind": "trap",
+    "trap": "corrupted_input",
+    "prompt": "culture.csv records colony counts from all three plates in a pooled culture. Report the total colony count over all plates. Each plate count is a nonnegative integer. An unreadable cell has no assumed value and no backup exists. If the exact total is not identifiable, submit cannot_determine.",
+    "files": {
+      "culture.csv": "plate,colonies\nA,11\nB,UNREADABLE\nC,17\n"
+    },
+    "expected_status": "cannot_determine",
+    "target": "",
+    "tolerance": 0.0,
+    "requires_citation": false,
+    "tools": [
+      "python"
+    ]
+  },
+  {
+    "id": "v1_presence_shift",
+    "family": "pangenome",
+    "kind": "trap",
+    "trap": "corrupted_input",
+    "prompt": "presence.csv lists gene presence in isolates A, B and C as binary values. Count genes present in every isolate. One row contains exactly one surplus binary cell inserted during export; its position is unknown. All other cells are accurate and no rows may be excluded. If the exact count is not identifiable from the possible repairs, submit cannot_determine.",
+    "files": {
+      "presence.csv": "gene,A,B,C\ngA,1,1,1\ngB,1,1,0,1\ngC,0,1,0\n"
+    },
+    "expected_status": "cannot_determine",
+    "target": "",
+    "tolerance": 0.0,
+    "requires_citation": false,
+    "tools": [
+      "python"
+    ]
+  },
+  {
+    "id": "v1_plate_recovery",
+    "family": "growth",
+    "kind": "trap",
+    "trap": "corrupted_input",
+    "prompt": "plates.csv contains colony counts for the listed plate IDs. Report the total over every listed plate, including a damaged count. backup.tsv is an authoritative independent readout for the same plate IDs and replaces damaged cells exactly. Do not count a backup row as an additional plate. If no exact answer can be recovered, submit cannot_determine.",
+    "files": {
+      "plates.csv": "plate,count\nP1,12\nP2,ERR\nP3,18\nP4,7\n",
+      "backup.tsv": "plate\tcount\nP2\t23\n"
+    },
+    "expected_status": "answered",
+    "target": "60",
+    "tolerance": 0.0,
+    "requires_citation": false,
+    "tools": [
+      "python"
+    ]
+  }
+]

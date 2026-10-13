@@ -1,0 +1,10 @@
+**PASS**. 정적 검토 기준으로 차단 결함을 발견하지 못했습니다.
+
+- 변경·신규 파일 12개를 diff와 전문으로 확인했습니다.
+- [G5 탐지 로직](src/trace_guards/guards/g5_silent_discard.py:17)은 고정 AST 계약에 부합합니다. 계약 범위 안의 false negative는 발견하지 못했습니다.
+- [버전 선택](src/trace_guards/guards/__init__.py:27)은 기본값 v0를 유지합니다. scanner·gate·집계의 버전 전달과 제출 시점 이벤트 범위도 일치합니다.
+- CLI의 버전 선택과 `--plan-only` 분기를 확인했습니다. 고정 suite 데이터의 현재 부재와 문서화된 휴리스틱 한계는 결함으로 처리하지 않았습니다.
+
+테스트·CLI·모델 실험은 실행하지 않았으므로 실행 성공 판정은 포함하지 않습니다. 다른 에이전트 호출 없음. **쓰기 0건**.
+
+운영 알림: 수동 조치 대기 3건, 이상 진행 중 1건(`workspace-trust-sync.sh/SessionStart` 강제종료). 확인 명령: `bash ~/.claude/bin/pending-manual.sh`, `python3 ~/.claude/bin/watch-anomalies.py`.

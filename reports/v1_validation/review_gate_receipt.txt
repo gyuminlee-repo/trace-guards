@@ -1,0 +1,10 @@
+NO .codex-review-passed
+1791802300 4ddb0cc14e7b06bfec8073346b5f96716e47dbaa03830e0f9a2c049a20e617c9 UNKNOWN
+reason=credit
+runtime_key=588df77ada9887e2e0b3cc41ed88666de0084ac56ee630eb3dd2a28b7975940c
+attempt_id=224b6f92de92419d9baebf318b6675fc
+failure_streak=1
+failure_reason=credit
+retry_at=1791802600
+coverage=SINGLE
+retry_protocol=payload-v1

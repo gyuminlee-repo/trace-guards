@@ -28,6 +28,7 @@ REQUIRES_CITATION_KEY = "tg:requires_citation"
 EVENTS_KEY = "tg:events"
 SUBMISSIONS_KEY = "tg:submissions"
 REJECTIONS_KEY = "tg:rejections"
+GUARD_VERSION_KEY = "tg:guard_version"
 
 SUBMIT_NAME = "submit"
 
@@ -128,7 +129,8 @@ def scan_sample(sample: EvalSample, submission_index: int = -1) -> list[Finding]
     """Scanner: run all guards over one submission of a logged sample."""
     trace, submission = trace_from_sample(sample, submission_index)
     return run_all(
-        trace, submission, requires_citation=sample.store[REQUIRES_CITATION_KEY]
+        trace, submission, requires_citation=sample.store[REQUIRES_CITATION_KEY],
+        guard_version=sample.store.get(GUARD_VERSION_KEY, "v0"),
     )
 
 
@@ -143,6 +145,7 @@ def trace_setup() -> Solver:
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         state.store.set(PROMPT_KEY, state.input_text)
+        state.store.set(GUARD_VERSION_KEY, state.metadata.get("guard_version", "v0"))
         state.store.set(
             REQUIRES_CITATION_KEY, bool(state.metadata.get("requires_citation", False))
         )
@@ -314,7 +317,8 @@ def _make_submit(max_rejections: int | None) -> Tool:
                 raise RuntimeError("trace_setup() must run before the agent")
             trace, _ = trace_from_store(data, task_id="live")
             findings = run_all(
-                trace, submission, requires_citation=s.get(REQUIRES_CITATION_KEY)
+                trace, submission, requires_citation=s.get(REQUIRES_CITATION_KEY),
+                guard_version=s.get(GUARD_VERSION_KEY, "v0"),
             )
             rejections = s.get(REJECTIONS_KEY, 0)
             decision = gate_decision(findings, rejections, max_rejections)
