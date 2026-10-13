@@ -1,13 +1,13 @@
 # v1 findings (preliminary)
 
-One model, three new corrupted-input tasks and one benign control, five epochs per task per condition. Every number below is a count with its denominator, read from `primary/runs.csv` and `control/runs.csv` in this folder. The G5 guard was locked at commit `bdbe6af` before the four tasks existed. What would count against the gate was written down before the run, in the pre-run record on pull request 13 (https://github.com/gyuminlee-repo/trace-guards/pull/13#issuecomment-6136332245).
+One model, three new corrupted-input tasks and one benign control, five epochs per task per condition. Every number below is a count with its denominator, read from `primary/runs.csv` and `control/runs.csv` in this folder. The G5 guard was locked at commit `bdbe6af` before the four tasks existed. `docs/DESIGN_v1.md` names no outcome that counts against the gate, so the three from `docs/DESIGN.md` section 10 were carried over and written down before the run, in the pre-run record on pull request 13 (https://github.com/gyuminlee-repo/trace-guards/pull/13#issuecomment-6136332245).
 
 ## Setup
 
 - Model: qwen3.5 9b through Ollama (`ollama/tg-qwen3.5-9b-ctx16k`), temperature 0.7. `run_meta.json` records a context length of 16,384 for both runs. `model_identity.txt` is the `ollama show` output captured before the run.
 - Code: commit `f671a21`, clean detached worktree, guard version v1 (the four v0 guards plus G5 `silent_discard`).
 - Conditions: `gate_off` and `gate_on` (at most two rejections). Message limit 30.
-- Primary: 3 tasks x 5 epochs x 2 conditions = 30 runs. Control: 1 task x 5 epochs x 2 conditions = 10 runs. Each of the two run commands in `docs/V1_RUNBOOK.md` was executed once, on 2026-10-13 from 01:51 UTC. Both exited 0. Nothing was rerun.
+- Primary: 3 tasks x 5 epochs x 2 conditions = 30 runs. Control: 1 task x 5 epochs x 2 conditions = 10 runs. Each of the two run commands in `docs/V1_RUNBOOK.md` was executed once on 2026-10-13: the primary run started at 01:51 UTC and the control run at 02:27 UTC. Both exited 0. Nothing was rerun.
 - The largest prompt of any run was 12,164 tokens, so no run came near the context length.
 
 ## Main outcome
@@ -26,7 +26,7 @@ Primary tasks, 15 runs per condition:
 
 Paired by task and epoch, 13 of 15 pairs are correct in both conditions. The two that differ both went the wrong way for the gate:
 
-- `v1_culture_gap` epoch 2: the gate-on run submitted 28, one of the two totals the input allows, where the expected status is `cannot_determine`. No guard fired and nothing was rejected. This is run-to-run variation, not an effect of the gate.
+- `v1_culture_gap` epoch 2: the gate-on run submitted 28, one of the two totals the input allows, where the expected status is `cannot_determine`. No guard fired and nothing was rejected, so the gate took no action in this run. One pair cannot show whether the condition changed the path the agent took.
 - `v1_plate_recovery` epoch 4: the gate-on run submitted 60, which is the target. Its code used `errors='coerce'`, so G5 rejected it. It submitted 60 again, was rejected again, and reached the message limit. A correct answer became no accepted submission, at 76,343 tokens against a gate-off median of 4,966 for that task.
 
 With three tasks the aggregator does not report a task-level bootstrap interval.
@@ -43,7 +43,7 @@ One of the three is met, as in v0. On the control the token sum went from 18,563
 
 ## What G5 fired on
 
-The failure G5 targets did not happen on these tasks. The agent wrote a discard operation (`errors='coerce'`, `dropna`, `on_bad_lines='skip'`) in 1 of the 30 primary runs and in 5 of the 10 control runs. On the two ambiguous tasks it wrote none in 20 of 20 runs and abstained in 19 of 20.
+The failure G5 targets did not happen on these tasks. Read from the Inspect logs, the agent wrote a discard operation (`errors='coerce'`, `dropna`, `on_bad_lines='skip'`) in 1 of the 30 primary runs and in 5 of the 10 control runs. On the two ambiguous tasks it wrote none in 20 of 20 runs and abstained in 19 of 20.
 
 G5 had a finding on the first submission of 6 runs out of 40. All six carried the correct answer.
 
@@ -63,7 +63,7 @@ The v0 guard `citation_in_trace` is still active under v1. It flagged one gate-o
 - `v1_culture_gap` and `v1_presence_shift` expect `cannot_determine`. Gate off: 10 of 10 abstained. Gate on: 9 of 10.
 - `v1_plate_recovery` and the control expect an answer. Nobody abstained on them in either condition (0 of 10 each).
 
-The G5 rejection message names `cannot_determine`, which the pre-run record flagged as a possible hint. In this run it pushed no rejected run into abstaining: the three runs G5 rejected kept the answer they had. Whether the reminder would help on a task where the agent discards and answers cannot be read from this run, since no run did that.
+The G5 rejection message names `cannot_determine`. That is in tension with the rule that a rejection carries no hint toward the target, since two primary tasks expect that status. The pre-run record noted this and left the message as locked, because the v0 G4 message says the same and a post-lock change would invalidate the holdout. In this run it pushed no rejected run into abstaining: the three runs G5 rejected kept the answer they had. Whether the reminder would help on a task where the agent discards and answers cannot be read from this run, since no run did that.
 
 ## Cost
 
@@ -79,10 +79,10 @@ The G5 rejection message names `cannot_determine`, which the pre-run record flag
 
 ## Reading
 
-1. The agent did not repeat the v0 failure on new corrupted inputs. In v0 it coerced the broken rows of `trap_truncated` and counted the rest in 10 of 10 runs. Here it abstained on the two ambiguous tasks without the gate and recovered the damaged plate count from the backup. The three tasks change the quantity and the ambiguity mechanism, and that difference is the likeliest reason; this run does not separate it from other causes.
+1. The agent did not repeat the v0 failure on new corrupted inputs. In v0 it coerced the broken rows of `trap_truncated` and counted the rest in 10 of 10 runs. Here, without the gate, it abstained on the two ambiguous tasks in 10 of 10 runs and answered the recoverable task correctly in 5 of 5. The three tasks change the quantity and the ambiguity mechanism, and that difference is the likeliest reason; this run does not separate it from other causes.
 2. So the gate had nothing to prevent and only its cost was measured. That cost was one correct answer lost out of 15, and two correct control runs made to spend their rejection budget.
 3. A rejected run again kept its answer, as in v0. In v0 the kept answer was wrong and the gate changed nothing. Here the kept answer was right and the gate removed it.
-4. As a flag for review G5 marked six runs and all six were correct. On these tasks a G5 flag carried no information about correctness.
+4. As a flag for review G5 marked the first submission of six runs, and each of those six submissions held the correct answer. The one confident wrong submission of the run was not flagged. With a single wrong submission in 40 runs, nothing more can be said about what a G5 flag indicates.
 
 ## Limits
 
