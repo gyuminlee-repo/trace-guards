@@ -1,0 +1,27 @@
+{
+  "commit": "f671a214895c06af838f8d9067b353ed13616429",
+  "guard_version": "v1",
+  "worktree_clean": true,
+  "models": [
+    "ollama/tg-qwen3.5-9b-ctx16k"
+  ],
+  "context_length": {
+    "ollama/tg-qwen3.5-9b-ctx16k": 16384
+  },
+  "conditions": [
+    "gate_off",
+    "gate_on"
+  ],
+  "temperature": 0.7,
+  "message_limit": 30,
+  "max_rejections": 2,
+  "epochs": 5,
+  "seed": 0,
+  "task_ids": [
+    "v1_culture_gap",
+    "v1_presence_shift",
+    "v1_plate_recovery"
+  ],
+  "inspect_ai_version": "0.3.273",
+  "started_utc": "2026-10-13T01:51:42+00:00"
+}

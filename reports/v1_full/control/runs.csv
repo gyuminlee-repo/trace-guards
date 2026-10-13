@@ -1,0 +1,11 @@
+model,task_id,kind,trap,epoch,condition,final_status,expected_status,correct,confident_wrong,abstained,wrong_abstention,n_submit_calls,n_rejections,gate_exhausted,first_findings,final_findings,first_unsupported,n_tool_events,input_tokens,output_tokens,total_tokens,max_prompt_tokens,context_risk,wall_seconds,accepted_submission_present,error
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,1,gate_off,answered,answered,1,0,0,0,1,0,0,,,0,2,937,428,3545,1291,0,8.9960,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,1,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,2,219,405,3470,1266,0,11.8190,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,2,gate_off,answered,answered,1,0,0,0,1,0,0,silent_discard,silent_discard,1,2,211,596,3858,1397,0,15.1370,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,2,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,2,199,485,3555,1316,0,6.5720,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,3,gate_off,answered,answered,1,0,0,0,1,0,0,silent_discard,silent_discard,1,2,112,453,3336,1202,0,16.9660,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,3,gate_on,answered,answered,1,0,0,0,3,2,1,silent_discard,silent_discard,1,6,620,1871,18524,3136,0,64.5680,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,4,gate_off,answered,answered,1,0,0,0,1,0,0,,,0,2,278,541,3751,1421,0,7.7160,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,4,gate_on,answered,answered,1,0,0,0,3,2,1,silent_discard,silent_discard,1,4,561,1505,12490,2693,0,66.4990,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,5,gate_off,answered,answered,1,0,0,0,1,0,0,silent_discard,silent_discard,1,2,302,653,4073,1472,0,10.8300,1,
+ollama/tg-qwen3.5-9b-ctx16k,v1_benign_missing,ordinary,,5,gate_on,answered,answered,1,0,0,0,1,0,0,,,0,2,187,552,3535,1305,0,9.1850,1,

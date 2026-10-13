@@ -41,7 +41,12 @@ The opt-in silent-discard v1 experiment is preregistered in
 check for explicit discard operations. v0 remains the default. The three new
 corrupted tasks and separate benign control are fixed after the guard lock.
 See [`docs/V1_RUNBOOK.md`](docs/V1_RUNBOOK.md) for clean-checkout validation and
-the parent-owned paired Ollama commands. No v1 model outcome is reported here.
+the parent-owned paired Ollama commands. The v1 run is reported in
+[`reports/v1_full/FINDINGS.md`](reports/v1_full/FINDINGS.md): the agent made no
+confident wrong submission on the new corrupted tasks with the gate off (0 of
+15), so G5 had nothing to prevent. G5 rejected three runs whose first submission
+already held the correct answer: one on a corrupted task and two on the
+benign control.
 
 Requirements: Python 3.11 or later, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and an Ollama server with a tool-calling model.
 
