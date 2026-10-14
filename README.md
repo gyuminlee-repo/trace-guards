@@ -9,12 +9,12 @@ The question: when an agent submits an answer to a science task, is that answer 
 | Part | Where | What it does |
 |---|---|---|
 | Trace model | `src/trace_guards/trace.py` | Framework-neutral record of one run: prompt, tool events, structured submission |
-| Guards | `src/trace_guards/guards/` | Four pure functions with no model call: value evidence, citation in trace, absence control, artifact and failure |
+| Guards | `src/trace_guards/guards/` | Five pure functions with no model call: value evidence, citation in trace, absence control, artifact and failure (v0), and silent discard (v1, opt-in) |
 | Inspect adapter | `src/trace_guards/inspect_adapter.py` | Recorded tools, a structured `submit`, and a gated `submit` that rejects when a guard fires |
-| Tasks | `src/trace_guards/tasks/` | Ten generated tasks in microbial genomics, transcriptomics and literature lookup; four are traps where the honest answer is "cannot determine" or where a naive lookup misleads |
+| Tasks | `src/trace_guards/tasks/` | Ten generated v0 tasks in microbial genomics, transcriptomics and literature lookup, four of them traps where the honest answer is "cannot determine" or where a naive lookup misleads; plus four fixed v1 tasks (three corrupted-input holdouts and one benign control) |
 | Experiment | `src/trace_guards/experiment/` | Runner and aggregation: per-run rows, Wilson intervals, task-level paired bootstrap, context-length check |
-| Design | `docs/DESIGN.md` | Written and frozen before the code. Change log records every revision and why |
-| Reports | `reports/` | Pilot runs on development tasks and the v0 run |
+| Design | `docs/DESIGN.md`, `docs/DESIGN_v1.md` | Written and frozen before the code of each version. Change log records every revision and why |
+| Reports | `reports/` | Pilot runs on development tasks, the v0 run, and the v1 run |
 
 The same guard functions are used two ways. As a **scanner** they label a finished run. As a **gate** they sit inside the submit tool and reject a submission that lacks evidence, so the agent continues working.
 
